@@ -59,8 +59,9 @@ int intSize() {
   int * intPtr1;
   int * intPtr2;
   // Write code to compute size of an integer.
-
-  return 2;
+  intPtr1 = intArray;
+  intPtr2 = intPtr1 + 1;
+  return (char*) intPtr2 - (char*) intPtr1;
 }
 
 /*
@@ -71,9 +72,9 @@ int doubleSize() {
   double * doubPtr1;
   double * doubPtr2;
   // Write code to compute size of a double.
-
-
-  return 2;
+  doubPtr1 = doubArray;
+  doubPtr2 = doubPtr1 + 1;
+  return (char*) doubPtr2 - (char*) doubPtr1;
 }
 
 /*
@@ -84,8 +85,9 @@ int pointerSize() {
   double ** ptrPtr1;
   double ** ptrPtr2;
   // Write code to compute size of a pointer.
-
-  return 2;
+  ptrPtr1 = ptrArray;
+  ptrPtr2 = ptrPtr1 + 1;
+  return (char*) ptrPtr2 - (char*) ptrPtr1;
 }
 
 /*
@@ -96,7 +98,9 @@ int changeValue() {
   int * intPtr1 = intArray;
   // Write code to change value of intArray[5] to 351 using only intPtr1 and the + operator.
   // Remember not to use constants greater than 255.
-
+  intPtr1 = intPtr1 + 5;
+  *intPtr1 = 255;
+  *intPtr1 = *intPtr1 + 96;
   return intArray[5];
 }
 
