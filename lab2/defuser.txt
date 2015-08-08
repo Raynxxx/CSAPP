@@ -1,2 +1,5 @@
 Speedy thing goes in, speedy thing comes out.
 1 6 11 16 21 26
+0 j 459
+9
+7 93
