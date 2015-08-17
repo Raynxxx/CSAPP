@@ -45,7 +45,7 @@ int get_block_size(void) {
   access_cache(0);
   while(access_cache(idx)) {
     idx++;
-		size++;
+    size++;
   }
   return size;
 }
@@ -60,12 +60,12 @@ int get_cache_size(int block_size) {
   flush_cache();
   access_cache(0);
   while (access_cache(0)) {
-		i = block_size;
-		while (i <= cache_check) {
-			i += block_size;
-			access_cache(i);
-		}
-		cache_check += block_size;
+    i = block_size;
+    while (i <= cache_check) {
+      i += block_size;
+      access_cache(i);
+    }
+    cache_check += block_size;
   }
   return i;
 }
@@ -75,22 +75,22 @@ int get_cache_size(int block_size) {
 */
 int get_cache_assoc(int cache_size) {
   /* YOUR CODE GOES HERE */
-	int i = 0;
-	int cache_check = 1;
-	int assoc = 0;
-	flush_cache();
-	access_cache(0);
-	while (access_cache(0)) {
-		i = cache_size;
-		assoc = 0;
-		while (i <= cache_check) {
-			i += cache_size;
-			assoc++;
-			access_cache(i);
-		}
-		cache_check += cache_size;
-	}
-	return assoc;
+  int i = 0;
+  int cache_check = 1;
+  int assoc = 0;
+  flush_cache();
+  access_cache(0);
+  while (access_cache(0)) {
+    i = cache_size;
+    assoc = 0;
+    while (i <= cache_check) {
+      i += cache_size;
+      assoc++;
+      access_cache(i);
+    }
+    cache_check += cache_size;
+  }
+  return assoc;
 }
 
 int main(void) {
