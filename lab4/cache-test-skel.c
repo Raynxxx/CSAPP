@@ -5,21 +5,21 @@ Lab 4 - Mystery Caches
 
 Mystery Cache Geometries:
 mystery0:
-    block size =
-    cache size =
-    associativity =
+    block size = 64 bytes
+    cache size = 262144 bytes
+    associativity = 1
 mystery1:
-    block size =
-    cache size =
-    associativity =
+    block size = 8 bytes
+    cache size = 16384 bytes
+    associativity = 4
 mystery2:
-    block size =
-    cache size =
-    associativity =
+    block size = 16 bytes
+    cache size = 65536 bytes
+    associativity = 16
 mystery3:
-    block size =
-    cache size =
-    associativity =
+    block size = 2 bytes
+    cache size = 131072 bytes
+    associativity = 2
 */
 
 #include <stdlib.h>
@@ -39,8 +39,15 @@ mystery3:
 */
 int get_block_size(void) {
   /* YOUR CODE GOES HERE */
-
-  return -1;
+  int idx = 0;
+  int size = 0;
+  flush_cache();
+  access_cache(0);
+  while(access_cache(idx)) {
+    idx++;
+		size++;
+  }
+  return size;
 }
 
 /*
@@ -48,7 +55,19 @@ int get_block_size(void) {
 */
 int get_cache_size(int block_size) {
   /* YOUR CODE GOES HERE */
-  return -1;
+  int i = 0;
+  int cache_check = block_size;
+  flush_cache();
+  access_cache(0);
+  while (access_cache(0)) {
+		i = block_size;
+		while (i <= cache_check) {
+			i += block_size;
+			access_cache(i);
+		}
+		cache_check += block_size;
+  }
+  return i;
 }
 
 /*
@@ -56,7 +75,22 @@ int get_cache_size(int block_size) {
 */
 int get_cache_assoc(int cache_size) {
   /* YOUR CODE GOES HERE */
-  return -1;
+	int i = 0;
+	int cache_check = 1;
+	int assoc = 0;
+	flush_cache();
+	access_cache(0);
+	while (access_cache(0)) {
+		i = cache_size;
+		assoc = 0;
+		while (i <= cache_check) {
+			i += cache_size;
+			assoc++;
+			access_cache(i);
+		}
+		cache_check += cache_size;
+	}
+	return assoc;
 }
 
 int main(void) {
