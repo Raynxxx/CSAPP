@@ -245,7 +245,7 @@ static void requestMoreSpace(size_t reqSize) {
   size_t prevLastWordMask;
 
   void* mem_sbrk_result = mem_sbrk(totalSize);
-  if ((size_t)mem_sbrk_result == -1) {
+  if ((long)mem_sbrk_result == -1) {
     printf("ERROR: mem_sbrk failed in requestMoreSpace\n");
     exit(0);
   }
@@ -286,7 +286,7 @@ int mm_init () {
   size_t totalSize;
 
   void* mem_sbrk_result = mem_sbrk(initSize);
-  //  printf("mem_sbrk returned %p\n", mem_sbrk_result);
+  // printf("mem_sbrk returned %p\n", mem_sbrk_result);
   if ((ssize_t)mem_sbrk_result == -1) {
     printf("ERROR: mem_sbrk failed in mm_init, returning %p\n", 
            mem_sbrk_result);
@@ -318,6 +318,35 @@ int mm_init () {
   return 0;
 }
 
+/* Print the heap by iterating through it as an implicit free list. */
+static void examine_heap() {
+  BlockInfo *block;
+
+  /* print to stderr so output isn't buffered and not output if we crash */
+  fprintf(stderr, "FREE_LIST_HEAD: %p\n", (void *)FREE_LIST_HEAD);
+
+  for (block = (BlockInfo *)UNSCALED_POINTER_ADD(mem_heap_lo(), WORD_SIZE); /* first block on heap */
+      SIZE(block->sizeAndTags) != 0 && block < mem_heap_hi();
+      block = (BlockInfo *)UNSCALED_POINTER_ADD(block, SIZE(block->sizeAndTags))) {
+
+    /* print out common block attributes */
+    fprintf(stderr, "%p: %ld %ld %ld\t",
+    (void *)block,
+    SIZE(block->sizeAndTags),
+    block->sizeAndTags & TAG_PRECEDING_USED,
+    block->sizeAndTags & TAG_USED);
+
+    /* and allocated/free specific data */
+    if (block->sizeAndTags & TAG_USED) {
+      fprintf(stderr, "ALLOCATED\n");
+    } else {
+      fprintf(stderr, "FREE\tnext: %p, prev: %p\n",
+      (void *)block->next,
+      (void *)block->prev);
+    }
+  }
+  fprintf(stderr, "END OF HEAP\n\n");
+}
 
 // TOP-LEVEL ALLOCATOR INTERFACE ------------------------------------
 
@@ -326,8 +355,10 @@ int mm_init () {
 void* mm_malloc (size_t size) {
   size_t reqSize;
   BlockInfo * ptrFreeBlock = NULL;
+  BlockInfo * nextFreeBlock = NULL;
   size_t blockSize;
   size_t precedingBlockUseTag;
+  size_t* nextFreeBlockFoot;
 
   // Zero-size requests get NULL.
   if (size == 0) {
@@ -350,18 +381,60 @@ void* mm_malloc (size_t size) {
   // Implement mm_malloc.  You can change or remove any of the above
   // code.  It is included as a suggestion of where to start.
   // You will want to replace this return statement...
-  return NULL; }
+  ptrFreeBlock = (BlockInfo*) searchFreeList(reqSize);
+  if (ptrFreeBlock == NULL) {
+    requestMoreSpace(reqSize);
+    ptrFreeBlock = (BlockInfo*) searchFreeList(reqSize);
+  }
+
+  blockSize = SIZE(ptrFreeBlock->sizeAndTags);
+  precedingBlockUseTag = ptrFreeBlock->sizeAndTags & TAG_PRECEDING_USED;
+
+  if (blockSize - reqSize >= MIN_BLOCK_SIZE) {
+    ptrFreeBlock->sizeAndTags = reqSize | precedingBlockUseTag | TAG_USED;
+    nextFreeBlock = (BlockInfo*) UNSCALED_POINTER_ADD(ptrFreeBlock, reqSize);
+    nextFreeBlock->sizeAndTags = (blockSize - reqSize) | TAG_PRECEDING_USED;
+    nextFreeBlockFoot = (size_t*) UNSCALED_POINTER_ADD(ptrFreeBlock, blockSize - WORD_SIZE);
+    *nextFreeBlockFoot = nextFreeBlock->sizeAndTags;
+    insertFreeBlock(nextFreeBlock);
+  } else {
+    ptrFreeBlock->sizeAndTags = blockSize | precedingBlockUseTag | TAG_USED;
+    nextFreeBlock = (BlockInfo*) UNSCALED_POINTER_ADD(ptrFreeBlock, blockSize);
+    nextFreeBlock->sizeAndTags |= TAG_PRECEDING_USED;
+    nextFreeBlockFoot = (size_t*) UNSCALED_POINTER_ADD(nextFreeBlock, SIZE(nextFreeBlock->sizeAndTags) - WORD_SIZE);
+    *nextFreeBlockFoot = nextFreeBlock->sizeAndTags;
+  }
+  removeFreeBlock(ptrFreeBlock);
+
+  return UNSCALED_POINTER_ADD(ptrFreeBlock, WORD_SIZE);
+}
 
 /* Free the block referenced by ptr. */
 void mm_free (void *ptr) {
   size_t payloadSize;
+  size_t blockSize;
   BlockInfo * blockInfo;
   BlockInfo * followingBlock;
 
   // Implement mm_free.  You can change or remove the declaraions
   // above.  They are included as minor hints.
+  blockInfo = (BlockInfo*) UNSCALED_POINTER_SUB(ptr, WORD_SIZE);
+  followingBlock = (BlockInfo*) UNSCALED_POINTER_ADD(blockInfo, SIZE(blockInfo->sizeAndTags));
 
+  blockSize = SIZE(blockInfo->sizeAndTags);
+  payloadSize = blockSize - WORD_SIZE;
+
+  blockInfo->sizeAndTags = blockInfo->sizeAndTags & ~TAG_USED;
+  *((size_t*) UNSCALED_POINTER_ADD(blockInfo, payloadSize)) = blockInfo->sizeAndTags;
+  followingBlock->sizeAndTags &= ~TAG_PRECEDING_USED;
+
+  if ((followingBlock->sizeAndTags & TAG_USED) == 0) {
+    *((size_t*) UNSCALED_POINTER_ADD(followingBlock, SIZE(followingBlock->sizeAndTags) - WORD_SIZE)) = followingBlock->sizeAndTags;
+  }
+  insertFreeBlock(blockInfo);
+  coalesceFreeBlock(blockInfo);
 }
+
 
 
 // Implement a heap consistency checker as needed.
